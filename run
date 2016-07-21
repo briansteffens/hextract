@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+if [[ ! -d "./libbasm" ]]; then
+    git clone https://github.com/briansteffens/libbasm
+fi
+
+cd libbasm
+git pull
+make
+./build.py str_len str_to_int byte_to_hex
+cd ..
+
+nasm -f elf64 -F dwarf hextract.asm
+ld hextract.o libbasm/bin/libbasm.a
+./a.out -o 3 test -s 7
+echo $?

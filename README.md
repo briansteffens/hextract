@@ -3,7 +3,19 @@ hextract
 
 Print a sequence of bytes from a file to the console in hex format.
 
-### Download and install:
+Example:
+
+```bash
+hextract somefile -o 5 -c 7
+```
+
+Example output:
+
+```bash
+62 75 69 6c 64 0a 0a
+```
+
+### Download and install
 
 ```bash
 git clone https://github.com/briansteffens/hextract
@@ -12,7 +24,7 @@ make
 sudo make install
 ```
 
-### Usage:
+### Usage
 
 Print a complete file's contents:
 

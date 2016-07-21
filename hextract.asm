@@ -26,7 +26,7 @@ section .bss
     file: resq 1
 
     arg_offset: resq 1
-    arg_size: resq 1
+    arg_count: resq 1
 
     %define buffer_max_len 26
     buffer: resb buffer_max_len
@@ -39,14 +39,17 @@ section .bss
 
 section .data
 
-    msg_usage: db "Usage: hextract filename <-o offset> <-s size>", 10
+    msg_usage: db "Usage: hextract filename [-o offset] [-c count]", 10
     msg_usage_len: equ $-msg_usage
 
     msg_open_fail: db "Unable to open file", 10
     msg_open_fail_len: equ $-msg_open_fail
 
-    msg_size_too_high: db "Size is too high: exceeds file size", 10
-    msg_size_too_high_len: equ $-msg_size_too_high
+    msg_read_fail: db "Unable to read from file", 10
+    msg_read_fail_len: equ $-msg_read_fail
+
+    msg_count_too_high: db "Count is too high: exceeds file size", 10
+    msg_count_too_high_len: equ $-msg_count_too_high
 
     msg_offset_too_high: db "Offset is too high: exceeds file size", 10
     msg_offset_too_high_len: equ $-msg_offset_too_high
@@ -80,26 +83,26 @@ _start:
     cmp qword [arg_offset], rax
     jge err_offset_too_high
 
-    ; Validate size argument
-    cmp qword [arg_size], 0
-    je arg_size_default
+    ; Validate count argument
+    cmp qword [arg_count], 0
+    je arg_count_default
 
-        ; Fail if (size + offset) > file size
+        ; Fail if (count + offset) > file size
         mov eax, [stat + stat_st_size]
         sub rax, [arg_offset]
-        cmp qword [arg_size], rax
-        jg err_size_too_high
+        cmp qword [arg_count], rax
+        jg err_count_too_high
 
-        jmp arg_size_done
+        jmp arg_count_done
 
-    arg_size_default:
+    arg_count_default:
 
-        ; Set size argument to (file size - offset) if not present
+        ; Set count argument to (file size - offset) if not present
         mov eax, [stat + stat_st_size]
         sub rax, [arg_offset]
-        mov qword [arg_size], rax
+        mov qword [arg_count], rax
 
-    arg_size_done:
+    arg_count_done:
 
     ; Open the file
     mov rax, sys_open
@@ -118,7 +121,7 @@ _start:
     mov rdx, 0
     syscall
 
-    mov rbx, [arg_size]
+    mov rbx, [arg_count]
 
     read_loop:
         cmp rbx, 0
@@ -143,7 +146,7 @@ _start:
         mov rsi, buffer
         syscall
         cmp rax, 0
-        jle err_open
+        jle err_read
         sub rbx, rax
         mov r12, rax
 
@@ -228,8 +231,8 @@ parse_args:
             cmp byte [rdi + 1], 'o'
             je arg_flag_offset
 
-            cmp byte [rdi + 1], 's'
-            je arg_flag_size
+            cmp byte [rdi + 1], 'c'
+            je arg_flag_count
 
             jmp err_print_usage
 
@@ -237,8 +240,8 @@ parse_args:
                 mov r13, arg_offset
                 jmp arg_parse
 
-            arg_flag_size:
-                mov r13, arg_size
+            arg_flag_count:
+                mov r13, arg_count
 
             arg_parse:
                 ; Advance to next parameter
@@ -283,9 +286,15 @@ err_open:
     jmp exit_fail
 
 
-err_size_too_high:
-    mov rsi, msg_size_too_high
-    mov rdx, msg_size_too_high_len
+err_read:
+    mov rsi, msg_read_fail
+    mov rdi, msg_read_fail_len
+    jmp exit_fail
+
+
+err_count_too_high:
+    mov rsi, msg_count_too_high
+    mov rdx, msg_count_too_high_len
     jmp exit_fail
 
 

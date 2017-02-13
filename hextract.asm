@@ -15,6 +15,7 @@
 
 extern str_len
 extern str_to_int
+extern hex_to_int
 extern byte_to_hex
 
 section .bss
@@ -162,6 +163,7 @@ _start:
             mov al, [r13]
             mov rdi, rax
             mov rsi, r14
+            mov rdx, 1
             call byte_to_hex
 
             ; Add space for padding
@@ -254,17 +256,33 @@ parse_args:
                 mov rsi, 255
                 call str_len
 
-                ; Convert to integer
+                ; Set parameters for hex_to_int / str_to_int
                 mov rsi, rax
                 mov rdi, [rbp + 8 * rbx]
-                call str_to_int
 
-                ; Error check
-                cmp rax, 0
-                jne err_print_usage
+                ; Check if the parameter is in hex (starts with 0x)
+                cmp word [rdi], 30768 ; Magic number for '0x' in ASCII
+                jne not_hex
 
-                mov [r13], rcx
-                jmp arg_loop_continue
+                    ; Input is hex. Chop off the '0x' prefix before parsing.
+                    add rdi, 2
+                    sub rsi, 2
+                    call hex_to_int
+                    jmp parse_done
+
+                not_hex:
+
+                    ; Convert to integer
+                    call str_to_int
+
+                parse_done:
+
+                    ; Error check
+                    cmp rax, 0
+                    jne err_print_usage
+
+                    mov [r13], rdx
+                    jmp arg_loop_continue
 
     arg_loop_continue:
         inc rbx
